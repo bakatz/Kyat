@@ -1,0 +1,14 @@
+{
+  "name":"kyat",
+  "node":"0.10.26",
+  "author":"bakatz",
+  "dependencies": {
+  	"socket.io": "*",
+  	"express": "*",
+        "ejs":"*",
+        "validator":"*"
+  },
+  "scripts": {
+  	"start": "node server.js"
+  }
+}
