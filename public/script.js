@@ -40,12 +40,12 @@ $(function() {
 	$("#usernameSubmit").click(function() {setUsername()});
 	$("#chatEntries").slimScroll({height: '800px'});
 	submitButton.click(function() {sentMessage();});
-	submitButton.on('keypress', function(e) {
-    if (e.which == 13 || e.keyCode == 13) {
-        e.preventDefault();
-		sentMessage();
-    }
-});
+	messageContainer.on('keypress', function(e) {
+		if (e.which == 13 || e.keyCode == 13) {
+			e.preventDefault();
+			sentMessage();
+		}
+	}); 
 	setHeight();
 });
 
@@ -65,7 +65,7 @@ socket.on('message', function(data) {
 
 // leave page, disconnect
 window.onbeforeunload = function() {
-    return 'Are you sure you want to quit? This will disconnect you from your chat partner.';
+	socket.emit('disconnect');
 }
 
 //Help functions
