@@ -98,12 +98,10 @@ function computeRandomPartner(socket, username) {
 	var randomSock = connectedUsers[randomUsername].connection;
 	
 	// if we try to match with someone who already has a partner or ourself, find another...
-        var count = 0;
-	while(connectedUsers[randomUsername].hasPartner || randomSock == socket || count < 10) {
+	while(connectedUsers[randomUsername].hasPartner || randomSock == socket) {
 		keys = Object.keys(connectedUsers);
 		randomUsername = keys[keys.length * Math.random() << 0];
 		randomSock = connectedUsers[randomUsername].connection;
-		count++;
 	}
 	setRandomPartner(socket, randomSock, username, randomUsername);
 }
