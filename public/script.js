@@ -59,7 +59,7 @@ socket.on('numUsers', function(msg) {
 });
 socket.on('message', function(data) {
 	addMessage(data['message'], data['username'], new Date().toISOString(), false);
-	console.log(data);
+	console.log("Got message: ", data['message'], " from ", data['username']);
 });
 
 
