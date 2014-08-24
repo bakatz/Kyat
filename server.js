@@ -127,7 +127,6 @@ function computeRandomPartner(socket, username) {
 			matchedSock = currSock;
 			break;
 		}
-		console.log("stuck");
 	}
 	
 	if(matchedUsername && matchedSock) {
