@@ -10,5 +10,9 @@
   },
   "scripts": {
   	"start": "node server.js"
+  },
+  "repository": {
+	"type": "git",
+	"url": "git://github.com/bakatz/Kyat.git"
   }
 }

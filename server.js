@@ -9,7 +9,7 @@ var http = require('http')
   , server = http.createServer(app)
   , io = require('socket.io').listen(server)
   , validator = require('validator');
-  
+var uuid = require('node-uuid');
 var connectedUsers = {};
 var numUsers = 0; //count the numUsers
 
@@ -22,34 +22,47 @@ app.set('view engine', 'ejs');
 app.set("view options", { layout: false })
 app.use(express.static(__dirname + '/public'));
 
-// Render and send the main page
 
+// Set up routes
 app.get('/', function(req, res){
   res.render('home.ejs');
 });
+
+app.get('/about', function(req, res){
+  res.render('about.ejs');
+});
+
+app.get('/feedback', function(req, res){
+  res.render('feedback.ejs');
+});
+
+
 server.listen(appPort, "::");
-// app.listen(appPort);
 console.log("Server listening on port " + appPort);
 
-// Handle the socket.io connections
-
-io.on('connection', function (socket) { // First connection
+// Handle the necessary socket.io events
+io.on('connection', function (socket) {
+	setupSocket(socket, uuid.v4());
 	numUsers++;
-	reloadUsers(); // Send the count to all the numUsers
+	broadcastNumUsers(); // Send the count to all sockets.
 	socket.on('message', function (data) { // Broadcast the message to all
 		var senderName = socket.username;
 		var partnerSocket = socket.partner;
 		var partnerName = partnerSocket.username;
-		var transmit = {date : new Date().toISOString(), username : validator.escape(senderName), message : validator.escape(data)};
-		console.log("Got partner name to send: ", partnerName);
+		var messageObj = {
+			date : new Date().toISOString(), 
+			username : senderName, //TODO: add this back in when users can set their own names. validator.escape(senderName), 
+			message : validator.escape(data)
+		};
+		console.log("trying to send message from ", senderName, " to ", partnerName, " : ", validator.escape(data));
 		var partner = connectedUsers[partnerName];
-		if(typeof partner !== "undefined" && partner !== null && typeof partner.connection !== "undefined" && partner.connection !== null) {
-			partner.connection.emit('message', transmit);
+		if(partner && partner.connection) {
+			partner.connection.emit('message', messageObj);
 		}
 	});
 
 	
-	socket.on('setUsername', function (username) { // Assign a name to the user
+/* 	socket.on('setUsername', function (username) { // Assign a name to the user
 		if (typeof connectedUsers[username] === "undefined") // Test if the name is already taken
 		{
 			socket.username = username;
@@ -59,28 +72,58 @@ io.on('connection', function (socket) { // First connection
 		}
 		else
 		{
-			socket.emit('usernameStatus', 'error') // Send the error
+			socket.emit('connectionStatus', 'error') // Send the error
 		}
-	});
+	}); */
 	
-	socket.on('disconnect', function () { // Disconnection of the client
-		numUsers -= 1;
-		reloadUsers();
+	// Handle disconnection of the client
+	socket.on('disconnect', function () {
+		numUsers--;
+		broadcastNumUsers();
 		var name = socket.username;
-		console.log(name, " disconnected");
-		delete connectedUsers[name];
+		if(name) {
+			console.log(name, " disconnected");
+			
+			// if we're talking to someone, we need to notify them that we just disconnected
+			if(socket.partner) {
+				socket.partner.emit("connectionStatus", "stop");
+			}
+			delete connectedUsers[name];
+		} else {
+			console.log("WARNING: socket disconnected without a username set, can't remove from list");
+		}
 	});
 });
 
-function reloadUsers() { // Send the count of the numUsers to all
+function setupSocket(socket, username) {
+	console.log("trying to set up with username: ", username, ", connectedUsers: ", connectedUsers);
+	if(!connectedUsers[username]) // Test if the name is already taken
+	{
+		socket.username = username;
+		connectedUsers[username] = {hasPartner: false, connection: socket};
+		console.log("user " + username + " connected. finding partner...")
+		computeRandomPartner(connectedUsers[username].connection, username);
+	}
+	else
+	{
+		socket.emit('connectionStatus', 'error') // Send the error
+	}
+}
+
+
+function broadcastNumUsers() { // Send the count of the numUsers to all
 	io.sockets.emit('numUsers', {"num": numUsers});
+}
+
+function isDefined(variable) {
+	return typeof(variable) !== "undefined" && variable !== null;
 }
 
 
 function computeRandomPartner(socket, username) {
 	var keys = Object.keys(connectedUsers);
 	if(keys.length < 2) {
-		return; // no one connected yet, let the next person to click the button find this guy who wasn't able to match.
+		return; // no one else connected yet, let the next person to click the start chatting button find this unmatched socket
 	}
 	
 	var randomUsername = keys[keys.length * Math.random() << 0];
@@ -96,7 +139,7 @@ function computeRandomPartner(socket, username) {
 	
 	console.log("found partner for ", username, ": ", randomUsername);
 	
-	if(typeof(randomUsername) !== "undefined" && randomUsername !== null && typeof(randomSock) !== "undefined" && randomSock !== null) {
+	if(randomUsername && randomSock) {
 		setPartner(socket, randomSock, username, randomUsername);
 	}
 }
@@ -104,8 +147,8 @@ function computeRandomPartner(socket, username) {
 function setPartner(socket, partnerSocket, username, partnerUsername) {
 	socket.partner = partnerSocket;
 	partnerSocket.partner = socket;
-	socket.emit('usernameStatus', 'ok');
-	partnerSocket.emit('usernameStatus', 'ok');
+	socket.emit('connectionStatus', 'start');
+	partnerSocket.emit('connectionStatus', 'start');
 	
 	connectedUsers[username].hasPartner = true;
 	connectedUsers[partnerUsername].hasPartner = true;
