@@ -22,7 +22,6 @@ app.set('view engine', 'ejs');
 app.set("view options", { layout: false })
 app.use(express.static(__dirname + '/public'));
 
-
 // Set up routes
 app.get('/', function(req, res){
   res.render('home.ejs');
@@ -48,6 +47,10 @@ io.on('connection', function (socket) {
 	socket.on('message', function (data) { // Broadcast the message to all
 		var senderName = socket.username;
 		var partnerSocket = socket.partner;
+		if(!partnerSocket) {
+			console.log("WARN: ", senderName, " tried to send a message to an undefined partner, ignoring");
+			return;
+		}
 		var partnerName = partnerSocket.username;
 		var messageObj = {
 			date : new Date().toISOString(), 
@@ -60,21 +63,6 @@ io.on('connection', function (socket) {
 			partner.connection.emit('message', messageObj);
 		}
 	});
-
-	
-/* 	socket.on('setUsername', function (username) { // Assign a name to the user
-		if (typeof connectedUsers[username] === "undefined") // Test if the name is already taken
-		{
-			socket.username = username;
-			connectedUsers[username] = {hasPartner: false, connection: socket};
-			console.log("user " + username + " connected. finding partner...")
-			computeRandomPartner(connectedUsers[username].connection, username);
-		}
-		else
-		{
-			socket.emit('connectionStatus', 'error') // Send the error
-		}
-	}); */
 	
 	// Handle disconnection of the client
 	socket.on('disconnect', function () {
@@ -123,24 +111,30 @@ function isDefined(variable) {
 function computeRandomPartner(socket, username) {
 	var keys = Object.keys(connectedUsers);
 	if(keys.length < 2) {
+		console.log("couldn't find partner for ", username, " because no one else has connected yet. waiting for the next person to match.");
 		return; // no one else connected yet, let the next person to click the start chatting button find this unmatched socket
 	}
 	
-	var randomUsername = keys[keys.length * Math.random() << 0];
-	var randomSock = connectedUsers[randomUsername].connection;
-	console.log("trying to find partner for ", username);
-	// if we try to match with someone who already has a partner or ourself, find another...
-	while((connectedUsers[randomUsername].hasPartner || randomSock === socket) && keys.length >= 2) {
-		var randomIndex = keys.length * Math.random() << 0;
-		randomUsername = keys[randomIndex];
-		randomSock = connectedUsers[randomUsername].connection;
-		keys.splice(randomIndex, 1);
+	var matchedUsername = null;
+	var matchedSock = null;
+	
+	for(var i = 0; i < keys.length; i++) {
+		var currUsername = keys[i];
+		var currUserObj = connectedUsers[currUsername];
+		var currSock = currUserObj.connection;
+		if(currUserObj.hasPartner === false && currSock !== socket) {
+			matchedUsername = currUsername;
+			matchedSock = currSock;
+			break;
+		}
+		console.log("stuck");
 	}
 	
-	console.log("found partner for ", username, ": ", randomUsername);
-	
-	if(randomUsername && randomSock) {
-		setPartner(socket, randomSock, username, randomUsername);
+	if(matchedUsername && matchedSock) {
+		console.log("found partner for ", username, ": ", matchedUsername);
+		setPartner(socket, matchedSock, username, matchedUsername);
+	} else {
+		console.log("couldn't find partner for ", username, ", waiting for next person to match.");
 	}
 }
 

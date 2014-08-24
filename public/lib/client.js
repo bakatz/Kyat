@@ -12,8 +12,20 @@ $.fn.enable = function() {
 
 $(function() {
 	var socket = null;
+	
+	function disableButtons() {
+		$("#sendButton").disable();
+		$("#messageInput").disable();
+		$("#messagesContainer").disable();
+	}
+	
+	function enableButtons() {
+		$("#sendButton").enable();
+		$("#messageInput").enable();
+		$("#messagesContainer").enable();
+	}
 	function addMessage(usernameStr, messageStr, timeStr) {
-		$("#messagesContainer").append(timeStr + " <span class=\"username\">" + usernameStr + ": </span><span class=\"message\">" + messageStr + "</span><br />");
+		$("#messagesContainer").append(timeStr + " - <span class=\"username\">" + usernameStr + ": </span><span class=\"message\">" + messageStr + "</span><br />");
 		$("#messageInput").val("");
 		$("#messagesContainer").slimScroll({scrollTo: Number.MAX_SAFE_INTEGER});
 	}
@@ -30,15 +42,16 @@ $(function() {
 		socket.emit("message", messageStr);
 	}
 	
+	
     $("#chatDiv").hide();
-
+	disableButtons();
+	
 	$("#startChattingButton").click(function() {
+
 		$("#welcomeDiv").fadeOut();
 		$("#chatDiv").fadeIn();
 	});
-	$("#sendButton").disable();
-	$("#messageInput").disable();
-	$("#messagesContainer").disable();
+
 	
 	$("#sendButton").click(sendMessage);
 	$("#messageInput").keyup(function(event) {
@@ -59,29 +72,24 @@ $(function() {
 		socket.on('connect', function() {
 			console.log('connected');
 		});
+		socket.on('numUsers', function(msg) {
+			$("#numUsers").html(parseInt(msg.num) <= 0 ? "0" : ((parseInt(msg.num)-1)+""));
+		});
 		
 		socket.on('connectionStatus', function(status) {
 			if(status === "start") {
 				console.log("start!");
-				$("#sendButton").enable();
-				$("#messageInput").enable();
-				$("#messagesContainer").enable();
 				$("#messagesContainer").append("<strong>You are now connected with a stranger. Say hello, or click disconnect if they're too weird.</strong><br />");
+				enableButtons();
 			} else if(status === "stop") {
-				console.log("Got partner disconnect");
+				console.log("Got partner disconnect, also sending disconnect message since we're now without a partner");
+				socket.emit("disconnect");
 				$("#messagesContainer").append("<strong>Your partner disconnected.</strong><br />");
-
-				$("#sendButton").disable();
-				$("#messageInput").disable();
-				$("#messagesContainer").disable();
+				disableButtons();
 			} else {
 				console.log("Got connection status error: ", status);
 				$("#messagesContainer").append("<strong>ERROR: You are already connected.</strong><br />");
 			}
-		});
-		
-		socket.on('numUsers', function(msg) {
-			$("#numUsers").html(parseInt(msg.num) <= 0 ? "0" : ((parseInt(msg.num)-1)+""));
 		});
 		socket.on('message', function(data) {
 			//addMessage(data['message'], data['username'], new Date().toISOString(), false);
