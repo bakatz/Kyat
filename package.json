@@ -5,8 +5,9 @@
   "dependencies": {
   	"socket.io": "*",
   	"express": "*",
-        "ejs":"*",
-        "validator":"*"
+    "ejs":"*",
+    "validator":"*",
+	"node-uuid":"*"
   },
   "scripts": {
   	"start": "node server.js"
