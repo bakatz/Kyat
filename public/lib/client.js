@@ -84,6 +84,7 @@ $(function() {
 			} else if(status === "stop") {
 				console.log("Got partner disconnect, also sending disconnect message since we're now without a partner");
 				socket.emit("disconnect");
+				socket.disconnect();
 				$("#messagesContainer").append("<strong>Your partner disconnected.</strong><br />");
 				disableButtons();
 			} else {

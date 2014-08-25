@@ -84,7 +84,6 @@ io.on('connection', function (socket) {
 });
 
 function setupSocket(socket, username) {
-	console.log("trying to set up with username: ", username, ", connectedUsers: ", connectedUsers);
 	if(!connectedUsers[username]) // Test if the name is already taken
 	{
 		socket.username = username;
@@ -100,6 +99,7 @@ function setupSocket(socket, username) {
 
 
 function broadcastNumUsers() { // Send the count of the numUsers to all
+	console.log("Broadcasting numUsers: ", numUsers);
 	io.sockets.emit('numUsers', {"num": numUsers});
 }
 
